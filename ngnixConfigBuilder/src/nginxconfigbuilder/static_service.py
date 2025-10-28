@@ -32,15 +32,45 @@ def create_static_service(
     # Crear configuración
     conf = Conf()
     
+    # Server block HTTP - Redirect to HTTPS + ACME Challenge
+    http_server = Server()
+    http_server.add(
+        Key('listen', '80'),
+        Key('listen', '[::]:80'),
+        Key('server_name', domain),
+        Comment(''),
+        Comment('ACME Challenge for Let\'s Encrypt')
+    )
+    
+    # Location para ACME challenge
+    acme_location = Location('/.well-known/acme-challenge/')
+    acme_location.add(
+        Key('root', '/var/www/certbot'),
+        Key('try_files', '$uri =404')
+    )
+    http_server.add(acme_location)
+    
+    # Redirect resto a HTTPS
+    redirect_location = Location('/')
+    redirect_location.add(
+        Key('return', '301 https://$host$request_uri')
+    )
+    http_server.add(redirect_location)
+    
+    conf.add(http_server)
+    
     # Server block HTTPS
     server = Server()
     server.add(
-        Key('listen', '443 ssl http2'),
-        Key('listen', '[::]:443 ssl http2'),
+        Key('listen', '443 ssl'),
+        Key('listen', '[::]:443 ssl'),
+        Key('http2', 'on'),
         Key('server_name', domain),
+        Comment(''),
         Comment('SSL certificates'),
         Key('ssl_certificate', f'/etc/letsencrypt/live/{domain}/fullchain.pem'),
         Key('ssl_certificate_key', f'/etc/letsencrypt/live/{domain}/privkey.pem'),
+        Comment(''),
         Comment('Static files configuration'),
         Key('root', root_path),
         Key('index', index_file)

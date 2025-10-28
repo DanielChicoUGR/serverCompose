@@ -54,17 +54,21 @@ uv run --project ../buildNginxConfig nginx-config add-stream dns 53 --udp
 # Generar configuración
 uv run --project ../buildNginxConfig nginx-config add-http nextcloud.hmbcentral.live nextcloud:80
 
-# Obtener certificado SSL
+# Verificar y recargar Nginx para habilitar el endpoint ACME
+docker exec nginx nginx -t
+docker exec nginx nginx -s reload
+
+# Obtener certificado SSL (ahora sí funcionará)
 docker exec certbot certbot certonly --webroot \
     -w /var/www/certbot \
     -d nextcloud.hmbcentral.live \
     -m dachival0007.2@gmail.com \
     --agree-tos --non-interactive
 
-# Verificar configuración
-docker exec nginx nginx -t
+# Verificar que el certificado se obtuvo correctamente
+docker exec certbot certbot certificates
 
-# Recargar Nginx
+# Recargar Nginx para usar el nuevo certificado
 docker exec nginx nginx -s reload
 ```
 
