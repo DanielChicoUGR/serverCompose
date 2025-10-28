@@ -10,6 +10,8 @@ nginx/
 ├── nginx.conf                     # Configuración global de Nginx
 ├── conf.d/                        # Configuraciones HTTP/HTTPS
 │   ├── default.conf              # Servidor por defecto + redirects HTTP→HTTPS
+│   ├── blocked-ips.conf          # IPs bloqueadas manualmente
+│   ├── rate-limiting-example.conf.disabled  # Ejemplos de rate limiting
 │   ├── service1.conf             # Configuración de servicios web
 │   └── streams/                  # Configuraciones TCP/UDP
 │       └── croc.conf             # Ejemplo: proxy TCP para Croc
@@ -18,7 +20,20 @@ nginx/
 │   └── default.key
 ├── letsencrypt/                  # Certificados Let's Encrypt
 │   └── acme.json
-└── certbot-webroot/              # Validación ACME para certificados
+├── certbot-webroot/              # Validación ACME para certificados
+├── logs/                         # Logs de Nginx (para Fail2Ban)
+│   ├── access.log
+│   └── error.log
+└── fail2ban/                     # Configuraciones de Fail2Ban
+    ├── README.md                 # Documentación completa
+    ├── install-fail2ban.sh       # Script de instalación
+    ├── jail.d/                   # Jails personalizados
+    │   └── nginx-custom.conf
+    └── filter.d/                 # Filtros de detección
+        ├── nginx-req-limit.conf
+        ├── nginx-login.conf
+        ├── nginx-404.conf
+        └── nginx-proxy.conf
 ```
 
 ## 🚀 Inicio Rápido
@@ -363,3 +378,62 @@ networks:
 - [Nginx Documentation](https://nginx.org/en/docs/)
 - [Let's Encrypt](https://letsencrypt.org/)
 - [Certbot Documentation](https://eff-certbot.readthedocs.io/)
+
+---
+
+## 🛡️ Protección con Fail2Ban
+
+Este proyecto incluye configuraciones completas de Fail2Ban para proteger contra:
+
+- ⚡ Rate limiting abuse
+- 🔐 Ataques de fuerza bruta en login
+- 🔍 Escaneo de directorios (404)
+- 🔄 Ataques DDoS en proxies
+
+### Instalación Rápida
+
+```bash
+# 1. Instalar Fail2Ban
+sudo apt update && sudo apt install fail2ban -y
+
+# 2. Instalar configuraciones
+cd fail2ban
+sudo ./install-fail2ban.sh
+
+# 3. Verificar
+sudo fail2ban-client status
+```
+
+### Helper Script
+
+Gestiona IPs bloqueadas fácilmente:
+
+```bash
+# Ver ayuda
+../fail2BanHelper.sh help
+
+# Banear una IP
+../fail2BanHelper.sh ban 192.168.1.100
+
+# Ver IPs bloqueadas
+../fail2BanHelper.sh list
+
+# Ver jails activos
+../fail2BanHelper.sh jails
+
+# Ver top IPs problemáticas
+../fail2BanHelper.sh top-offenders
+```
+
+### Documentación Completa
+
+Ver `fail2ban/README.md` para documentación detallada, incluyendo:
+
+- Configuración de jails
+- Filtros disponibles
+- Monitoreo y estadísticas
+- Solución de problemas
+
+```
+
+```
