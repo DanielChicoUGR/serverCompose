@@ -5,7 +5,10 @@ Herramienta CLI para generar configuraciones de Nginx de forma rápida y sencill
 ## 🚀 Características
 
 - ✅ **Servicios HTTP/HTTPS**: Genera configuraciones de proxy reverso con SSL/TLS
+- ✅ **Sitios Estáticos**: Configuración para servir sitios HTML/CSS/JS estáticos
 - ✅ **Servicios TCP/UDP (Streams)**: Configura proxies TCP/UDP para servicios no-HTTP
+- ✅ **Rate Limiting**: Protección automática contra solicitudes excesivas
+- ✅ **Headers de Seguridad**: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
 - ✅ **Soporte WebSocket**: Configura automáticamente headers para WebSockets
 - ✅ **Syntax Highlighting**: Visualiza las configuraciones generadas con colores
 - ✅ **Instrucciones interactivas**: Te guía paso a paso en la configuración
@@ -54,11 +57,42 @@ nginx/
 ### 2. Añadir servicio HTTP/HTTPS
 
 ```bash
-# Servicio básico
+# Servicio básico (con rate limiting general por defecto)
 nginx-config add-http app.hmbcentral.live myapp:8080
 
 # Con soporte WebSocket
 nginx-config add-http ws.hmbcentral.live myws:3000 --websocket
+
+# API con rate limiting más permisivo
+nginx-config add-http api.hmbcentral.live api:5000 --rate-limit api
+
+# Login con rate limiting estricto
+nginx-config add-http auth.hmbcentral.live auth:8080 --rate-limit login
+
+# Protección triple: general + login + api (RECOMENDADO)
+nginx-config add-http app.hmbcentral.live myapp:8080 \
+  --login-paths /login \
+  --login-paths /auth \
+  --api-paths /api/ \
+  --rate-limit general
+
+# Solo paths de login con protección especial
+nginx-config add-http app.hmbcentral.live myapp:8080 \
+  --login-paths /login \
+  --login-paths /register \
+  --rate-limit general
+
+# Solo paths de API con rate limiting alto
+nginx-config add-http app.hmbcentral.live myapp:8080 \
+  --api-paths /api/ \
+  --api-paths /v1/ \
+  --rate-limit general
+
+# Sin rate limiting
+nginx-config add-http admin.hmbcentral.live admin:8080 --rate-limit none
+
+# Sin headers de seguridad (no recomendado)
+nginx-config add-http legacy.hmbcentral.live legacy:8080 --no-security-headers
 
 # Especificar directorio de salida
 nginx-config add-http app.example.com myapp:8080 -o /etc/nginx/conf.d
@@ -67,8 +101,60 @@ nginx-config add-http app.example.com myapp:8080 -o /etc/nginx/conf.d
 **Opciones:**
 
 - `--websocket, -ws`: Habilitar soporte WebSocket
+- `--rate-limit, -rl`: Tipo de rate limiting (`general`, `login`, `api`, `none`) - default: `general`
+- `--login-paths, -lp`: Paths de login con rate limiting especial (ej: `/login`, `/auth`) - puede repetirse múltiples veces
+- `--api-paths, -ap`: Paths de API con rate limiting especial (ej: `/api/`, `/v1/`) - puede repetirse múltiples veces
+- `--no-security-headers`: Deshabilitar headers de seguridad (no recomendado)
 - `--output, -o`: Directorio de salida (default: `./conf.d`)
 - `--email, -e`: Email para certificados SSL (default: `dachival0007.2@gmail.com`)
+
+**Rate Limiting Zones:**
+
+- `general`: 10 req/s con burst de 20 (uso general)
+- `login`: 5 req/min con burst de 3 (endpoints de autenticación)
+- `api`: 30 req/s con burst de 50 (APIs REST)
+- `none`: Sin rate limiting
+
+**Protección por Capas:**
+
+Cuando usas `--login-paths` y/o `--api-paths` con `--rate-limit general`, obtienes protección multinivel:
+
+```bash
+nginx-config add-http app.example.com app:8080 \
+  --login-paths /login \
+  --api-paths /api/ \
+  --rate-limit general
+```
+
+Esto genera:
+
+- `/login` → Rate limit: 5 req/min (zona `login`)
+- `/api/*` → Rate limit: 30 req/s (zona `api`)
+- `/*` → Rate limit: 10 req/s (zona `general`)
+
+### 2.1 Añadir sitio estático
+
+```bash
+# Sitio estático básico (sin rate limiting por defecto)
+nginx-config add-static blog.hmbcentral.live /var/www/blog
+
+# Con archivo índice personalizado
+nginx-config add-static docs.hmbcentral.live /var/www/docs --index index.htm
+
+# Con rate limiting
+nginx-config add-static site.hmbcentral.live /var/www/site --rate-limit general
+
+# Sin headers de seguridad
+nginx-config add-static old.hmbcentral.live /var/www/old --no-security-headers
+```
+
+**Opciones:**
+
+- `--index, -i`: Archivo índice (default: `index.html`)
+- `--rate-limit, -rl`: Tipo de rate limiting (`general`, `login`, `api`, `none`) - default: `none`
+- `--no-security-headers`: Deshabilitar headers de seguridad
+- `--output, -o`: Directorio de salida (default: `./conf.d`)
+- `--email, -e`: Email para certificados SSL
 
 ### 3. Añadir servicio TCP/UDP (Stream)
 
@@ -165,7 +251,17 @@ server {
     ssl_certificate /etc/letsencrypt/live/app.hmbcentral.live/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/app.hmbcentral.live/privkey.pem;
 
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
     location / {
+        # Rate limiting - zone: general
+        limit_req zone=general burst=20 nodelay;
+        limit_conn addr 10;
+
         proxy_pass http://myapp;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -257,6 +353,44 @@ nginx-config --version
 
 ## 📚 Documentación
 
+### 🛡️ Seguridad y Rate Limiting
+
+Este generador incluye protecciones de seguridad por defecto:
+
+#### Headers de Seguridad (habilitados por defecto)
+
+- **X-Frame-Options**: Previene clickjacking
+- **X-Content-Type-Options**: Previene MIME sniffing
+- **X-XSS-Protection**: Protección contra XSS
+- **Referrer-Policy**: Control de información del referrer
+
+#### Rate Limiting
+
+El rate limiting protege contra ataques de fuerza bruta y DDoS. Zonas disponibles:
+
+| Zona      | Rate      | Burst | Uso Recomendado             |
+| --------- | --------- | ----- | --------------------------- |
+| `general` | 10 req/s  | 20    | Sitios web normales         |
+| `login`   | 5 req/min | 3     | Endpoints de autenticación  |
+| `api`     | 30 req/s  | 50    | APIs REST                   |
+| `none`    | -         | -     | Sin límites (admin/interno) |
+
+**Nota**: Las zonas deben estar configuradas en `nginx.conf`:
+
+```nginx
+limit_req_zone $binary_remote_addr zone=general:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
+limit_conn_zone $binary_remote_addr zone=addr:10m;
+```
+
+#### Integración con Fail2Ban
+
+Las configuraciones generadas son compatibles con Fail2Ban. Ver:
+
+- `nginx/fail2ban/README.md` - Configuración completa de Fail2Ban
+- `FAIL2BAN-QUICK-START.md` - Guía rápida de instalación
+
 ### Python API
 
 También puedes usar las funciones programáticamente:
@@ -264,16 +398,34 @@ También puedes usar las funciones programáticamente:
 ```python
 from nginxconfigbuilder import create_http_service, save_http_config
 
-# Crear configuración
+# Crear configuración con rate limiting y seguridad
 conf = create_http_service(
     domain='app.example.com',
     upstream_target='myapp:8080',
-    enable_websocket=True
+    enable_websocket=True,
+    rate_limit='general',
+    security_headers=True
 )
 
 # Guardar archivo
 config_path = save_http_config(conf, 'myapp', './conf.d')
 print(f"Configuración guardada en: {config_path}")
+```
+
+**Sitios estáticos:**
+
+```python
+from nginxconfigbuilder import create_static_service, save_static_config
+
+conf = create_static_service(
+    domain='blog.example.com',
+    root_path='/var/www/blog',
+    index_file='index.html',
+    rate_limit=None,  # Sin rate limiting
+    security_headers=True
+)
+
+config_path = save_static_config(conf, 'blog', './conf.d')
 ```
 
 ## 🤝 Contribuir

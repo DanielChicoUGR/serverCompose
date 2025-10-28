@@ -34,9 +34,13 @@ def cli():
 @click.argument('domain')
 @click.argument('upstream')
 @click.option('--websocket', '-ws', is_flag=True, help='Habilitar soporte WebSocket')
+@click.option('--rate-limit', '-rl', type=click.Choice(['general', 'login', 'api', 'none']), default='general', help='Tipo de rate limiting global (default: general)')
+@click.option('--login-paths', '-lp', multiple=True, help='Paths de login con rate limiting especial (ej: /login /auth)')
+@click.option('--api-paths', '-ap', multiple=True, help='Paths de API con rate limiting especial (ej: /api/ /v1/)')
+@click.option('--no-security-headers', is_flag=True, help='Deshabilitar headers de seguridad')
 @click.option('--output', '-o', default='./conf.d', help='Directorio de salida para las configuraciones')
 @click.option('--email', '-e', default='dachival0007.2@gmail.com', help='Email para certificados SSL')
-def add_http(domain, upstream, websocket, output, email):
+def add_http(domain, upstream, websocket, rate_limit, login_paths, api_paths, no_security_headers, output, email):
     """
     Añadir servicio HTTP/HTTPS.
     
@@ -49,6 +53,14 @@ def add_http(domain, upstream, websocket, output, email):
         nginx-config add-http app.hmbcentral.live myapp:8080
         
         nginx-config add-http ws.hmbcentral.live myws:3000 --websocket
+        
+        nginx-config add-http api.hmbcentral.live api:5000 --rate-limit api
+        
+        nginx-config add-http admin.hmbcentral.live admin:8080 --rate-limit none
+        
+        nginx-config add-http app.hmbcentral.live myapp:8080 --login-paths /login --login-paths /auth
+        
+        nginx-config add-http app.hmbcentral.live myapp:8080 --api-paths /api/ --rate-limit general
     """
     try:
         # Validar formato del upstream
@@ -58,9 +70,25 @@ def add_http(domain, upstream, websocket, output, email):
         
         service_name = upstream.split(':')[0]
         
+        # Convertir rate_limit 'none' a None
+        rate_limit_value = None if rate_limit == 'none' else rate_limit
+        security_headers = not no_security_headers
+        
+        # Convertir tuples a listas o None
+        login_paths_list = list(login_paths) if login_paths else None
+        api_paths_list = list(api_paths) if api_paths else None
+        
         # Crear configuración
         with console.status(f"[bold green]Generando configuración para {service_name}..."):
-            conf = create_http_service(domain, upstream, websocket)
+            conf = create_http_service(
+                domain, 
+                upstream, 
+                websocket,
+                rate_limit=rate_limit_value,
+                security_headers=security_headers,
+                login_paths=login_paths_list,
+                api_paths=api_paths_list
+            )
         
         # Guardar archivo
         config_path = save_http_config(conf, service_name, output)
@@ -86,9 +114,11 @@ def add_http(domain, upstream, websocket, output, email):
 @click.argument('domain')
 @click.argument('root_path')
 @click.option('--index', '-i', default='index.html', help='Archivo índice (default: index.html)')
+@click.option('--rate-limit', '-rl', type=click.Choice(['general', 'login', 'api', 'none']), default='none', help='Tipo de rate limiting (default: none)')
+@click.option('--no-security-headers', is_flag=True, help='Deshabilitar headers de seguridad')
 @click.option('--output', '-o', default='./conf.d', help='Directorio de salida para las configuraciones')
 @click.option('--email', '-e', default='dachival0007.2@gmail.com', help='Email para certificados SSL')
-def add_static(domain, root_path, index, output, email):
+def add_static(domain, root_path, index, rate_limit, no_security_headers, output, email):
     """
     Añadir sitio web estático.
     
@@ -101,14 +131,26 @@ def add_static(domain, root_path, index, output, email):
         nginx-config add-static blog.hmbcentral.live /var/www/blog
         
         nginx-config add-static docs.hmbcentral.live /var/www/docs --index index.htm
+        
+        nginx-config add-static site.hmbcentral.live /var/www/site --rate-limit general
     """
     try:
         # Extraer nombre del sitio del dominio
         site_name = domain.split('.')[0]
         
+        # Convertir rate_limit 'none' a None
+        rate_limit_value = None if rate_limit == 'none' else rate_limit
+        security_headers = not no_security_headers
+        
         # Crear configuración
         with console.status(f"[bold green]Generando configuración para sitio estático {site_name}..."):
-            conf = create_static_service(domain, root_path, index)
+            conf = create_static_service(
+                domain, 
+                root_path, 
+                index,
+                rate_limit=rate_limit_value,
+                security_headers=security_headers
+            )
         
         # Guardar archivo
         config_path = save_static_config(conf, site_name, output)
@@ -205,6 +247,7 @@ def init(nginx_dir):
             base_path / 'letsencrypt',
             base_path / 'certbot-webroot',
             base_path / 'www',  # Directorio para sitios estáticos
+            base_path / 'logs',  # Logs para Fail2Ban
         ]
         
         console.print("\n[bold cyan]📁 Creando estructura de directorios...[/bold cyan]\n")

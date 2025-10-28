@@ -3,12 +3,19 @@ Módulo para crear configuraciones de sitios estáticos en Nginx.
 """
 
 from pathlib import Path
+from typing import Optional
 
 # Importar la librería nginx del paquete
 from .nginx import Conf, Server, Location, Key, Comment
 
 
-def create_static_service(domain: str, root_path: str, index_file: str = 'index.html') -> Conf:
+def create_static_service(
+    domain: str, 
+    root_path: str, 
+    index_file: str = 'index.html',
+    rate_limit: Optional[str] = None,
+    security_headers: bool = True
+) -> Conf:
     """
     Crea una configuración de sitio estático HTTP/HTTPS.
     
@@ -16,6 +23,8 @@ def create_static_service(domain: str, root_path: str, index_file: str = 'index.
         domain: Dominio del sitio (ej: blog.hmbcentral.live)
         root_path: Ruta al directorio con los archivos estáticos (ej: /var/www/blog)
         index_file: Archivo índice (default: index.html)
+        rate_limit: Tipo de rate limiting ('general', 'login', 'api', None)
+        security_headers: Añadir headers de seguridad (default: True)
         
     Returns:
         Objeto Conf con la configuración generada
@@ -37,8 +46,34 @@ def create_static_service(domain: str, root_path: str, index_file: str = 'index.
         Key('index', index_file)
     )
     
+    # Security headers
+    if security_headers:
+        server.add(
+            Comment('Security headers'),
+            Key('add_header', 'X-Frame-Options "SAMEORIGIN" always'),
+            Key('add_header', 'X-Content-Type-Options "nosniff" always'),
+            Key('add_header', 'X-XSS-Protection "1; mode=block" always'),
+            Key('add_header', 'Referrer-Policy "strict-origin-when-cross-origin" always')
+        )
+    
     # Location block para archivos estáticos
     location = Location('/')
+    
+    # Rate limiting (opcional, normalmente no necesario para sitios estáticos)
+    if rate_limit:
+        rate_limit_config = {
+            'general': ('general', 'burst=20 nodelay'),
+            'login': ('login', 'burst=3 nodelay'),
+            'api': ('api', 'burst=50 nodelay')
+        }
+        
+        if rate_limit in rate_limit_config:
+            zone, params = rate_limit_config[rate_limit]
+            location.add(
+                Comment(f'Rate limiting - zone: {zone}'),
+                Key('limit_req', f'zone={zone} {params}')
+            )
+    
     location.add(
         Key('try_files', '$uri $uri/ =404')
     )

@@ -58,6 +58,19 @@ def print_http_instructions(console: Console, domain: str, service_name: str,
 • Asegúrate de que el servicio '[cyan]{service_name}[/cyan]' esté en la red '[cyan]proxy[/cyan]'
 • El servicio debe exponer el puerto internamente (usa [cyan]expose[/cyan], no [cyan]ports[/cyan])
 • El DNS debe apuntar a tu servidor antes de obtener el certificado SSL
+
+[cyan]🛡️  Seguridad:[/cyan]
+
+• Rate limiting: Protección automática contra solicitudes excesivas
+• Headers de seguridad: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
+• Fail2Ban: Considera instalar Fail2Ban para protección adicional
+  Ver: nginx/fail2ban/README.md
+
+[cyan]📊 Rate Limiting Zones:[/cyan]
+
+• general: 10 req/s (uso normal)
+• login: 5 req/min (endpoints de autenticación)
+• api: 30 req/s (APIs REST)
 """
     
     console.print(Panel(notes, border_style="yellow", title="[bold]💡 Información[/bold]"))
@@ -219,7 +232,14 @@ def print_static_instructions(console: Console, domain: str, site_name: str,
 • El DNS debe apuntar a tu servidor antes de obtener el certificado SSL
 • Los archivos estáticos serán servidos directamente sin proxy
 
-[cyan]📂 Estructura de ejemplo:[/cyan]
+[cyan]�️  Seguridad:[/cyan]
+
+• Headers de seguridad: Protección contra clickjacking, XSS, y MIME sniffing
+• Rate limiting: Opcional para sitios estáticos (usa --rate-limit si es necesario)
+• Fail2Ban: Considera instalar Fail2Ban para protección adicional
+  Ver: nginx/fail2ban/README.md
+
+[cyan]�📂 Estructura de ejemplo:[/cyan]
 
 {root_path}/
 ├── index.html
