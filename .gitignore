@@ -1,3 +1,5 @@
 **/letsencript/
 **/.env
 **/ssl
+
+**/__pycache__/**
