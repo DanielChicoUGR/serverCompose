@@ -12,7 +12,8 @@ from pathlib import Path
 
 from .http_service import create_http_service, save_http_config
 from .stream_service import create_stream_service, save_stream_config
-from .utils import print_http_instructions, print_stream_instructions
+from .static_service import create_static_service, save_static_config
+from .utils import print_http_instructions, print_stream_instructions, print_static_instructions
 
 console = Console()
 
@@ -23,8 +24,8 @@ def cli():
     """
     🔧 Nginx Config Builder - Generador de configuraciones Nginx
     
-    Herramienta CLI para crear configuraciones de servicios HTTP/HTTPS y TCP/UDP
-    para Nginx de forma rápida y sencilla.
+    Herramienta CLI para crear configuraciones de servicios HTTP/HTTPS, TCP/UDP
+    y sitios estáticos para Nginx de forma rápida y sencilla.
     """
     pass
 
@@ -82,10 +83,58 @@ def add_http(domain, upstream, websocket, output, email):
 
 
 @cli.command()
+@click.argument('domain')
+@click.argument('root_path')
+@click.option('--index', '-i', default='index.html', help='Archivo índice (default: index.html)')
+@click.option('--output', '-o', default='./conf.d', help='Directorio de salida para las configuraciones')
+@click.option('--email', '-e', default='dachival0007.2@gmail.com', help='Email para certificados SSL')
+def add_static(domain, root_path, index, output, email):
+    """
+    Añadir sitio web estático.
+    
+    DOMAIN: Dominio del sitio (ej: blog.hmbcentral.live)
+    
+    ROOT_PATH: Ruta al directorio con archivos estáticos (ej: /var/www/blog)
+    
+    Ejemplos:
+    
+        nginx-config add-static blog.hmbcentral.live /var/www/blog
+        
+        nginx-config add-static docs.hmbcentral.live /var/www/docs --index index.htm
+    """
+    try:
+        # Extraer nombre del sitio del dominio
+        site_name = domain.split('.')[0]
+        
+        # Crear configuración
+        with console.status(f"[bold green]Generando configuración para sitio estático {site_name}..."):
+            conf = create_static_service(domain, root_path, index)
+        
+        # Guardar archivo
+        config_path = save_static_config(conf, site_name, output)
+        
+        # Mostrar configuración generada
+        console.print(f"\n[bold green]✅ Configuración de sitio estático creada:[/bold green] {config_path}\n")
+        
+        # Leer y mostrar contenido con syntax highlighting
+        with open(config_path, 'r') as f:
+            content = f.read()
+            syntax = Syntax(content, "nginx", theme="monokai", line_numbers=True)
+            console.print(Panel(syntax, title=f"[bold]{config_path.name}[/bold]", border_style="magenta"))
+        
+        # Mostrar instrucciones
+        print_static_instructions(console, domain, site_name, root_path, config_path, email)
+        
+    except Exception as e:
+        console.print(f"[red]❌ Error: {e}[/red]")
+        raise click.Abort()
+
+
+@cli.command()
 @click.argument('service')
 @click.argument('port_start', type=int)
 @click.argument('port_end', type=int, required=False)
-@click.option('--protocol', '-p', type= Literal['TCP', 'UDP', 'BOTH'], default='TCP' ,help='Usar protocolo UDP en lugar de TCP')
+@click.option('--udp', is_flag=True, help='Usar protocolo UDP en lugar de TCP')
 @click.option('--output', '-o', default='./conf.d/streams', help='Directorio de salida para las configuraciones')
 def add_stream(service, port_start, port_end, udp, output):
     """
@@ -155,6 +204,7 @@ def init(nginx_dir):
             base_path / 'ssl',
             base_path / 'letsencrypt',
             base_path / 'certbot-webroot',
+            base_path / 'www',  # Directorio para sitios estáticos
         ]
         
         console.print("\n[bold cyan]📁 Creando estructura de directorios...[/bold cyan]\n")

@@ -158,3 +158,77 @@ networks:
 """
     
     return snippet
+
+
+def print_static_instructions(console: Console, domain: str, site_name: str, 
+                             root_path: str, config_path: Path, email: str):
+    """
+    Imprime instrucciones para configurar un sitio estático.
+    
+    Args:
+        console: Objeto Console de rich
+        domain: Dominio del sitio
+        site_name: Nombre del sitio
+        root_path: Ruta al directorio con archivos estáticos
+        config_path: Ruta del archivo de configuración
+        email: Email para certificados SSL
+    """
+    # Crear tabla de pasos
+    table = Table(title="📋 Pasos Siguientes", show_header=True, header_style="bold cyan")
+    table.add_column("Paso", style="cyan", width=6)
+    table.add_column("Descripción", style="white")
+    table.add_column("Comando", style="green")
+    
+    table.add_row(
+        "1️⃣",
+        "Colocar archivos estáticos",
+        f"Copia tus archivos HTML/CSS/JS a:\n{root_path}"
+    )
+    
+    table.add_row(
+        "2️⃣",
+        "Obtener certificado SSL",
+        f"docker exec certbot certbot certonly --webroot \\\n"
+        f"    -w /var/www/certbot \\\n"
+        f"    -d {domain} \\\n"
+        f"    -m {email} \\\n"
+        f"    --agree-tos --non-interactive"
+    )
+    
+    table.add_row(
+        "3️⃣",
+        "Verificar configuración",
+        "docker exec nginx nginx -t"
+    )
+    
+    table.add_row(
+        "4️⃣",
+        "Recargar Nginx",
+        "docker exec nginx nginx -s reload"
+    )
+    
+    console.print("\n")
+    console.print(table)
+    
+    # Panel de notas importantes
+    notes = f"""
+[yellow]⚠️  Notas importantes:[/yellow]
+
+• Asegúrate de que el directorio '[cyan]{root_path}[/cyan]' exista y contenga tus archivos
+• El directorio debe ser accesible por el contenedor de Nginx (considera usar un volumen)
+• El DNS debe apuntar a tu servidor antes de obtener el certificado SSL
+• Los archivos estáticos serán servidos directamente sin proxy
+
+[cyan]📂 Estructura de ejemplo:[/cyan]
+
+{root_path}/
+├── index.html
+├── css/
+│   └── styles.css
+├── js/
+│   └── app.js
+└── images/
+    └── logo.png
+"""
+    
+    console.print(Panel(notes, border_style="yellow", title="[bold]💡 Información[/bold]"))
