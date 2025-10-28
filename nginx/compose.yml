@@ -17,6 +17,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./letsencrypt:/etc/letsencrypt:ro
+      - ./webs:/var/www/:ro
       - /var/run/docker.sock:/tmp/docker.sock:ro
     environment:
       - TZ=UTC

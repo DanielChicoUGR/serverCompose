@@ -3,3 +3,6 @@
 **/ssl
 **/logs
 **/__pycache__/**
+
+
+nginx/webs/

@@ -1,0 +1,3 @@
+[submodule "PersonalWeb"]
+	path = PersonalWeb
+	url = git@github.com:DanielChicoUGR/PersonalWeb.git
