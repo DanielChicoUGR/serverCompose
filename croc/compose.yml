@@ -1,0 +1,13 @@
+services:
+  croc:
+    image: schollz/croc:latest
+    env_file: .env
+    networks:
+      - nginx_proxy
+    expose:
+      - "9009-9013"
+    # Publicar puerto(s) en el host para conexiones directas (9009-9013)
+
+networks:
+  nginx_proxy:
+    external: true
