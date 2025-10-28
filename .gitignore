@@ -1,3 +1,4 @@
+!**/.gitkeep
 **/letsencript/
 **/.env
 **/ssl
@@ -5,4 +6,4 @@
 **/__pycache__/**
 
 
-nginx/webs/
+nginx/webs/**
