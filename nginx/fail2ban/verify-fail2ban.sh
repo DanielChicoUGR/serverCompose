@@ -106,6 +106,7 @@ echo ""
 
 # 5. Verificar logs de Nginx accesibles
 print_info "Verificando logs de Nginx..."
+print_info $(dirname "$0")
 NGINX_LOGS_DIR="$(dirname "$0")/logs"
 if [[ -f "$NGINX_LOGS_DIR/error.log" ]]; then
     print_success "Log de error encontrado"

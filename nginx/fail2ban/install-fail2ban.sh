@@ -40,7 +40,7 @@ FAIL2BAN_FILTER_DIR="/etc/fail2ban/filter.d"
 print_header() {
     echo -e "${BLUE}╔══════════════════════════════════════════════════════════╗${NC}"
     echo -e "${BLUE}║                                                          ║${NC}"
-    echo -e "${BLUE}║   🛡️  Instalador de Configuración Fail2Ban para Nginx   ║${NC}"
+    echo -e "${BLUE}║   🛡️  Instalador de Configuración Fail2Ban para Nginx    ║${NC}"
     echo -e "${BLUE}║                                                          ║${NC}"
     echo -e "${BLUE}╚══════════════════════════════════════════════════════════╝${NC}"
     echo ""
