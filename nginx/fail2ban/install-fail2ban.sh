@@ -122,7 +122,7 @@ remove_old_links() {
         fi
     done
 }
-
+# sa
 create_hard_links() {
     print_info "Creando hard links de configuraciones..."
     echo ""
