@@ -20,10 +20,10 @@ BLOCKED_IPS="$HOME/Proyectos/serverCompose/nginx/conf.d/blocked-ips.conf"
 NGINX_CONTAINER="nginx"
 
 # Colores
-RED='\e[0;31m'
-GREEN='\e[0;32m'
-YELLOW='\e[1;33m'
-BLUE='\e[0;34m'
+RED='\e[31m'
+GREEN='\e[32m'
+YELLOW='\e[33m'
+BLUE='\e[34m'
 NC='\e[0m' # No Color
 
 # ==============================================================================
@@ -274,9 +274,9 @@ cmd_stats() {
 }
 
 show_help() {
-    cat << EOF
+    echo -e "
 ${BLUE}╔══════════════════════════════════════════════════════════╗${NC}
-${BLUE}║          Fail2Ban Helper - Sistema de Ayuda             ║${NC}
+${BLUE}║          Fail2Ban Helper - Sistema de Ayuda              ║${NC}
 ${BLUE}╚══════════════════════════════════════════════════════════╝${NC}
 
 ${YELLOW}Comandos disponibles:${NC}
@@ -318,8 +318,7 @@ ${YELLOW}Jails disponibles:${NC}
   • nginx-login-abuse   (Abuso de login)
   • nginx-404           (Escaneo 404)
   • nginx-proxy         (Errores de proxy)
-
-EOF
+"
 }
 
 # ==============================================================================
@@ -352,6 +351,7 @@ case "$1" in
         cmd_stats
         ;;
     help|--help|-h)
+    
         show_help
         ;;
     *)

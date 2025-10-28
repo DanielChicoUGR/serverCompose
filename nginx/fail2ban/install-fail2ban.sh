@@ -19,10 +19,11 @@
 set -e  # Salir si hay errores
 
 # Colores para output
-RED='\e[0;31m'
-GREEN='\e[0;32m'
-YELLOW='\e[1;33m'
-BLUE='\e[0;34m'
+# Colores
+RED='\e[31m'
+GREEN='\e[32m'
+YELLOW='\e[33m'
+BLUE='\e[34m'
 NC='\e[0m' # No Color
 
 # Variables
