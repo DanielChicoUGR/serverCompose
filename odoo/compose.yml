@@ -1,20 +1,7 @@
 services:
-  odoo:
-    image: odoo:19.0
-    depends_on:
-      - db_odoo
-    expose:
-      - "8069"
-    volumes:
-      - odoo-web-data:/var/lib/odoo
-      - ./config:/etc/odoo
-      - ./addons:/mnt/extra-addons
-    environment:
-      - PASSWORD_FILE=/run/secrets/postgresql_password
-    secrets:
-      - postgresql_password
-  db_odoo:
+  postgres:
     image: postgres:15
+    container_name: odoo_postgres
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgresql_password
@@ -24,12 +11,53 @@ services:
       - odoo-db-data:/var/lib/postgresql/data/pgdata
     secrets:
       - postgresql_password
-volumes:
-  odoo-web-data:
-  odoo-db-data:
+    networks:
+      - odoo_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  odoo:
+    image: odoo:18.0
+    container_name: odoo
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - HOST=postgres
+      - USER=odoo
+      - PASSWORD_FILE=/run/secrets/postgresql_password
+    volumes:
+      - odoo-web-data:/var/lib/odoo
+      - ./config:/etc/odoo
+      - ./addons:/mnt/extra-addons
+    secrets:
+      - postgresql_password
+      - odoo_admin_password
+    networks:
+      - odoo_network
+      - nginx_proxy
+    expose:
+      - "8069" # Puerto web
+      - "8072" # Puerto longpolling/chat
+    restart: unless-stopped
+    command: -- --db_host=postgres --db_port=5432 --db_user=odoo --db_password_file=/run/secrets/postgresql_password
 secrets:
   postgresql_password:
-    file: odoo_pg_pass
+    file: ./odoo_pg_pass
+  odoo_admin_password:
+    file: ./odoo_admin_pass
+volumes:
+  odoo-web-data:
+    driver: local
+  odoo-db-data:
+    driver: local
 
-
+networks:
+  odoo_network:
+    driver: bridge
+  nginx_proxy:
+    external: true

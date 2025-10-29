@@ -13,3 +13,8 @@ nginx-config = "nginxconfigbuilder.cli:cli"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "passlib>=1.7.4",
+]
