@@ -2,6 +2,7 @@ services:
   croc:
     image: schollz/croc:latest
     env_file: .env
+    restart: unless-stopped
     networks:
       - nginx_proxy
     expose:
