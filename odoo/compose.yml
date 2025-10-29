@@ -4,9 +4,9 @@ services:
     container_name: odoo_postgres
     environment:
       - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgresql_password
       - POSTGRES_USER=odoo
       - PGDATA=/var/lib/postgresql/data/pgdata
+      - PASSWORD_FILE=/run/secrets/postgresql_password
     volumes:
       - odoo-db-data:/var/lib/postgresql/data/pgdata
     secrets:
@@ -32,7 +32,7 @@ services:
       - PASSWORD_FILE=/run/secrets/postgresql_password
     volumes:
       - odoo-web-data:/var/lib/odoo
-      - ./config:/etc/odoo
+      - ./config:/etc/odoo:ro
       - ./addons:/mnt/extra-addons
     secrets:
       - postgresql_password
