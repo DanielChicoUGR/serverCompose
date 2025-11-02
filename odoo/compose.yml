@@ -43,6 +43,7 @@ services:
       - odoo_master_password
     networks:
       - odoo-network
+      - nginx_proxy
     restart: unless-stopped
     command: --
       --db_host=db
@@ -60,7 +61,8 @@ volumes:
 networks:
   odoo-network:
     driver: bridge
-
+  nginx_proxy:
+    external: true
 secrets:
   db_password:
     file: ./secrets/db_password.txt
