@@ -1,0 +1,19 @@
+# Secrets - NUNCA commitear contraseñas
+secrets/
+*.txt
+
+# Archivos de configuración local
+.env
+
+# Datos de Odoo
+addons/*
+!addons/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# Archivos temporales
+*.pyc
+__pycache__/
+.DS_Store
