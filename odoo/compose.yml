@@ -1,18 +1,19 @@
+version: "3.8"
+
 services:
-  postgres:
-    image: postgres:15
-    container_name: odoo_postgres
+  db:
+    image: postgres:18
+    container_name: odoo_db
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=odoo
-      - PGDATA=/var/lib/postgresql/data/pgdata
-      - PASSWORD_FILE=/run/secrets/postgresql_password
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
     volumes:
-      - odoo-db-data:/var/lib/postgresql/data/pgdata
+      - odoo-db-data:/var/lib/postgresql/data
     secrets:
-      - postgresql_password
+      - db_password
     networks:
-      - odoo_network
+      - odoo-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U odoo"]
@@ -21,35 +22,35 @@ services:
       retries: 5
 
   odoo:
-    image: odoo:18.0
-    container_name: odoo
+    image: odoo:19.0
+    container_name: odoo_app
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
+    ports:
+      - "8069:8069"
+      - "8072:8072" # Puerto para longpolling
     environment:
-      - HOST=postgres
+      - HOST=db
       - USER=odoo
-      - PASSWORD_FILE=/run/secrets/postgresql_password
+      - PASSWORD_FILE=/run/secrets/db_password
     volumes:
       - odoo-web-data:/var/lib/odoo
-      - ./config:/etc/odoo:ro
+      - ./config:/etc/odoo
       - ./addons:/mnt/extra-addons
     secrets:
-      - postgresql_password
-      - odoo_admin_password
+      - db_password
+      - odoo_master_password
     networks:
-      - odoo_network
-      - nginx_proxy
-    expose:
-      - "8069" # Puerto web
-      - "8072" # Puerto longpolling/chat
+      - odoo-network
     restart: unless-stopped
-    command: -- --db_host=postgres --db_port=5432 --db_user=odoo --db_password_file=/run/secrets/postgresql_password
-secrets:
-  postgresql_password:
-    file: ./odoo_pg_pass
-  odoo_admin_password:
-    file: ./odoo_admin_pass
+    command: --
+      --db_host=db
+      --db_port=5432
+      --db_user=odoo
+      --db_password_file=/run/secrets/db_password
+      --admin_passwd_file=/run/secrets/odoo_master_password
+
 volumes:
   odoo-web-data:
     driver: local
@@ -57,7 +58,11 @@ volumes:
     driver: local
 
 networks:
-  odoo_network:
+  odoo-network:
     driver: bridge
-  nginx_proxy:
-    external: true
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  odoo_master_password:
+    file: ./secrets/odoo_master_password.txt
