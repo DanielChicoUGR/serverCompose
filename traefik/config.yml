@@ -1,0 +1,46 @@
+http:
+  middlewares:
+    # Rate Limiting General (equivalente a Nginx general)
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1m
+    
+    # Rate Limiting para Login
+    rate-limit-login:
+      rateLimit:
+        average: 5
+        burst: 3
+        period: 1m
+    
+    # Rate Limiting para APIs
+    rate-limit-api:
+      rateLimit:
+        average: 300
+        burst: 100
+        period: 1m
+    
+    # Security Headers
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "SAMEORIGIN"
+          X-XSS-Protection: "1; mode=block"
+    
+    # Compress responses
+    compress:
+      compress: {}
+    
+    # Chain de middlewares común
+    default-chain:
+      chain:
+        middlewares:
+          - rate-limit
+          - security-headers
+          - compress

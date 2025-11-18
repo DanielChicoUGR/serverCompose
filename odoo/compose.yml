@@ -1,70 +1,73 @@
-version: "3.8"
-
 services:
-  db:
-    image: postgres:18
-    container_name: odoo_db
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=odoo
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
-    volumes:
-      - odoo-db-data:/var/lib/postgresql/data
-    secrets:
-      - db_password
-    networks:
-      - odoo-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U odoo"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    db:
+        image: postgres:15
+        container_name: odoo_db
+        environment:
+            - POSTGRES_DB=odoo
+            - POSTGRES_USER=odoo
+            - POSTGRES_PASSWORD=odoo
+        volumes:
+            - ./odoo-db-data:/var/lib/postgresql/data
 
-  odoo:
-    image: odoo:19.0
-    container_name: odoo_app
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "8069:8069"
-      - "8072:8072" # Puerto para longpolling
-    environment:
-      - HOST=db
-      - USER=odoo
-      - PASSWORD_FILE=/run/secrets/db_password
-    volumes:
-      - odoo-web-data:/var/lib/odoo
-      - ./config:/etc/odoo
-      - ./addons:/mnt/extra-addons
-    secrets:
-      - db_password
-      - odoo_master_password
-    networks:
-      - odoo-network
-      - nginx_proxy
-    restart: unless-stopped
-    command: --
-      --db_host=db
-      --db_port=5432
-      --db_user=odoo
-      --db_password_file=/run/secrets/db_password
-      --admin_passwd_file=/run/secrets/odoo_master_password
+        networks:
+            - odoo-network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U odoo"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
-volumes:
-  odoo-web-data:
-    driver: local
-  odoo-db-data:
-    driver: local
+    odoo:
+        image: odoo:18
+        container_name: odoo_app
+
+        # command: ["odoo", "-d", "odoo", "-i", "base", "--without-demo=all"]
+        depends_on:
+            db:
+                condition: service_healthy
+        environment:
+            ## Cambios Realizados
+            # - HOST=db
+            # - ADMIN_PASSWD=${ADMIN_PASSWD}
+            # VARIABLES CORREGIDAS DE CONEXIÓN A POSTGRES
+            - PGHOST=db
+            - PGUSER=odoo
+            - PGPASSWORD=odoo
+            - PGDATABASE=odoo
+            - ODOO_MASTER_PASSWD=${ADMIN_PASSWD}
+
+        volumes:
+            - ./odoo-web-data:/var/lib/odoo
+            - ./config:/etc/odoo
+            - ./addons:/mnt/extra-addons
+
+        networks:
+            - odoo-network
+            - nginx_proxy
+        labels:
+            - "traefik.enable=true"
+
+            # Router principal (puerto 8069)
+            - "traefik.http.routers.odoo.rule=Host(`erp.hmbcentral.live`)"
+            - "traefik.http.routers.odoo.entrypoints=websecure"
+            - "traefik.http.routers.odoo.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.odoo.middlewares=default-chain@file"
+            - "traefik.http.services.odoo.loadbalancer.server.port=8069"
+            - "traefik.http.routers.odoo.service=odoo"
+
+            # Longpolling (puerto 8072)
+            - "traefik.http.routers.odoo-longpolling.rule=Host(`erp.hmbcentral.live`) && PathPrefix(`/longpolling`)"
+            - "traefik.http.routers.odoo-longpolling.entrypoints=websecure"
+            - "traefik.http.routers.odoo-longpolling.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.odoo-longpolling.middlewares=rate-limit-api@file"
+            - "traefik.http.services.odoo-longpolling.loadbalancer.server.port=8072"
+            - "traefik.http.routers.odoo-longpolling.service=odoo-longpolling"
+
+        restart: unless-stopped
 
 networks:
-  odoo-network:
-    driver: bridge
-  nginx_proxy:
-    external: true
-secrets:
-  db_password:
-    file: ./secrets/db_password.txt
-  odoo_master_password:
-    file: ./secrets/odoo_master_password.txt
+    odoo-network:
+        driver: bridge
+    nginx_proxy:
+        external: true

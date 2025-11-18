@@ -1,0 +1,76 @@
+services:
+    traefik:
+        image: traefik:latest
+        container_name: traefik
+        restart: unless-stopped
+        command:
+            # API y Dashboard
+            - "--api.dashboard=true"
+            - "--api.insecure=false"
+
+            # Providers
+            - "--providers.docker=true"
+            - "--providers.docker.exposedbydefault=false"
+            - "--providers.docker.network=nginx_proxy"
+            - "--providers.file.directory=/etc/traefik/dynamic"
+            - "--providers.file.watch=true"
+            # Entrypoints
+            - "--entrypoints.web.address=:80"
+            - "--entrypoints.websecure.address=:443"
+
+            # Redirect HTTP -> HTTPS
+            - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+            - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+              # Entrypoints TCP para Croc (9009-9013)
+            - "--entrypoints.croc-9009.address=:9009"
+            - "--entrypoints.croc-9010.address=:9010"
+            - "--entrypoints.croc-9011.address=:9011"
+            - "--entrypoints.croc-9012.address=:9012"
+            - "--entrypoints.croc-9013.address=:9013"
+
+            # Let's Encrypt
+            - "--certificatesresolvers.letsencrypt.acme.email=dachival0007.2@gmail.com"
+            - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+            - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+            - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+
+            # Logs
+            - "--log.level=INFO"
+            - "--accesslog=true"
+            - "--accesslog.filepath=/var/log/traefik/access.log"
+
+            # Rate Limiting Global
+            # - "--entrypoints.websecure.http.middlewares=rate-limit@file"
+
+        ports:
+            - "80:80"
+            - "443:443"
+            - "9009-9013:9009-9013"
+
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - ./letsencrypt:/letsencrypt
+            - ./logs:/var/log/traefik
+            # - ./config:/etc/traefik/dynamic
+            - ./config.yml:/etc/traefik/dynamic/middleware.yml:ro
+
+        networks:
+            - nginx_proxy
+
+        labels:
+            # Dashboard (protegido con BasicAuth)
+            - "traefik.enable=true"
+            - "traefik.http.routers.dashboard.rule=Host(`traefik.hmbcentral.live`)"
+            - "traefik.http.routers.dashboard.service=api@internal"
+            - "traefik.http.routers.dashboard.entrypoints=websecure"
+            - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
+
+            # BasicAuth para Dashboard (usuario: admin, password: changeme)
+            # Generar con: htpasswd -nb admin password
+            - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$2y$$05$$4pVOUXibMBAtdxvIa.3viu9PCRtVES2irBV7sK4Q08NLUm9fpKoEa"
+
+networks:
+    nginx_proxy:
+        external: true
