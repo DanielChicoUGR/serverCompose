@@ -29,6 +29,12 @@ services:
             - "--entrypoints.croc-9012.address=:9012"
             - "--entrypoints.croc-9013.address=:9013"
 
+            # TCP para Email (SMTPS y IMAPS)
+            - "--entrypoints.smtps.address=:465"
+            - "--entrypoints.imaps.address=:993"
+            - "--entrypoints.starttls.address=:587"
+            
+
             # Let's Encrypt
             - "--certificatesresolvers.letsencrypt.acme.email=dachival0007.2@gmail.com"
             - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
@@ -47,6 +53,9 @@ services:
             - "80:80"
             - "443:443"
             - "9009-9013:9009-9013"
+            - "465:465"
+            - "993:993"
+            - "587:587"
 
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro

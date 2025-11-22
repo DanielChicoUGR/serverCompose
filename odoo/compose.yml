@@ -7,7 +7,7 @@ services:
             - POSTGRES_USER=odoo
             - POSTGRES_PASSWORD=odoo
         volumes:
-            - ./odoo-db-data:/var/lib/postgresql/data
+            - odoo-db-data:/var/lib/postgresql/data
 
         networks:
             - odoo-network
@@ -22,7 +22,7 @@ services:
         image: odoo:18
         container_name: odoo_app
 
-        # command: ["odoo", "-d", "odoo", "-i", "base", "--without-demo=all"]
+        command: ["odoo", "-d", "odoo", "-i", "base", "--without-demo=all"]
         depends_on:
             db:
                 condition: service_healthy
@@ -35,10 +35,10 @@ services:
             - PGUSER=odoo
             - PGPASSWORD=odoo
             - PGDATABASE=odoo
-            - ODOO_MASTER_PASSWD=${ADMIN_PASSWD}
+            # - ODOO_MASTER_PASSWD=${ADMIN_PASSWD}
 
         volumes:
-            - ./odoo-web-data:/var/lib/odoo
+            - odoo-web-data:/var/lib/odoo
             - ./config:/etc/odoo
             - ./addons:/mnt/extra-addons
 
@@ -64,6 +64,14 @@ services:
             - "traefik.http.services.odoo-longpolling.loadbalancer.server.port=8072"
             - "traefik.http.routers.odoo-longpolling.service=odoo-longpolling"
 
+            # --- Router y Servicio TCP para Correo Entrante (SMTPS -> Odoo) ---
+            - "traefik.tcp.routers.odoo-smtps-service.rule=HostSNI(`mail.erp.hmbcentral.live`)"
+            - "traefik.tcp.routers.odoo-smtps-service.entrypoints=smtps" # Asegúrate de que 'smtps' existe en tu config de Traefik
+            - "traefik.tcp.routers.odoo-smtps-service.service=odoo-smtps-service"
+            - "traefik.tcp.routers.odoo-smtps-service.tls.certresolver=letsencrypt"
+
+            - "traefik.tcp.services.odoo-smtps-service.loadbalancer.server.port=8071" # Apunta al puerto configurado en odoo.conf
+
         restart: unless-stopped
 
 networks:
@@ -71,3 +79,7 @@ networks:
         driver: bridge
     nginx_proxy:
         external: true
+
+volumes:
+    odoo-web-data:
+    odoo-db-data:
