@@ -1,0 +1,108 @@
+x-kestra-common: &kestra-common
+  image: kestra/kestra:latest
+  pull_policy: always
+  user: "root"
+  volumes:
+    - kestra-data:/app/storage
+    
+    - /tmp/kestra-wd:/tmp/kestra-wd
+  networks:
+    - kestra_internal
+  depends_on:
+    postgres:
+      condition: service_started
+  environment:
+    KESTRA_CONFIGURATION: &common_configuration |
+      datasources:
+        postgres:
+          url: jdbc:postgresql://postgres:5432/kestra
+          driverClassName: org.postgresql.Driver
+          username: kestra
+          password: k3str4
+      kestra:
+        repository:
+          type: postgres
+        storage:
+          type: local
+          local:
+            base-path: "/app/storage"
+        queue:
+          type: postgres
+        tasks:
+          tmp-dir:
+            path: /tmp/kestra-wd/tmp
+
+networks:
+  kestra_internal:
+    driver: bridge
+  nginx_proxy:
+    external: true
+
+volumes:
+  postgres-data:
+    driver: local
+  kestra-data:
+    driver: local
+
+services:
+  postgres:
+    image: postgres:18
+    networks:
+      - kestra_internal
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: k3str4
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  kestra-scheduler:
+    <<: *kestra-common
+    command: server scheduler
+
+  kestra-worker:
+    <<: *kestra-common
+    command: server worker
+
+  kestra-executor:
+    <<: *kestra-common
+    command: server executor
+
+  kestra-webserver:
+    <<: *kestra-common
+    command: server webserver
+    networks:
+      - nginx_proxy
+      - kestra_internal
+    expose:
+      - "8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kestra.rule=Host(`kestra.hmbcentral.live`)"
+      - "traefik.http.routers.kestra.tls=true"
+      - "traefik.http.routers.kestra.entrypoints=websecure"
+      - "traefik.http.routers.kestra.tls.certresolver=letsencrypt"
+      - "traefik.http.services.kestra.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.kestra.headers.SSLRedirect=true"
+      - "traefik.http.middlewares.kestra.headers.STSSeconds=315360000"
+      - "traefik.http.middlewares.kestra.headers.browserXSSFilter=true"
+      - "traefik.http.middlewares.kestra.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.kestra.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.kestra.headers.SSLHost=hmbcentral.live"
+      - "traefik.http.middlewares.kestra.headers.STSIncludeSubdomains=true"
+      - "traefik.http.middlewares.kestra.headers.STSPreload=true"
+      - "traefik.http.routers.kestra.middlewares=kestra@docker"
+    environment:
+      KESTRA_CONFIGURATION: |
+        <<: *common_configuration
+        kestra:
+          server:
+            basic-auth:
+              username: ${ADMIN_MAIL} # it must be a valid email address
+              password: ${ADMIN_PSW} # it must be at least 8 characters long with uppercase letter and a number
+          url: https://kestra.hmbcentral.live

@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  kestra:
+    image: kestra/kestra:latest
+    pull_policy: always
+    user: root
+    command: server standalone
+    env_file:
+      - .env
+    volumes:
+      - ./application.yaml:/app/application.yaml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nginx_proxy
+      - kestra_internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kestra.rule=Host(`kestra.hmbcentral.live`)"
+      - "traefik.http.routers.kestra.tls=true"
+      - "traefik.http.routers.kestra.entrypoints=websecure"
+      - "traefik.http.routers.kestra.tls.certresolver=letsencrypt"
+      - "traefik.http.services.kestra.loadbalancer.server.port=8080"
+
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: k3str4
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - kestra_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+
+networks:
+  nginx_proxy:
+    external: true
+  kestra_internal:
+    internal: true
