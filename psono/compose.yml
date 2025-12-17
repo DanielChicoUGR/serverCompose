@@ -1,5 +1,6 @@
 services:
   psono-db:
+    container_name: psono-db
     image: postgres:13-alpine
     restart: unless-stopped
     environment:
@@ -15,13 +16,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   psono:
+    container_name: psono
     image: psono/psono-combo:latest
     restart: unless-stopped
     depends_on:
       psono-db:
         condition: service_healthy
+    command: sh -c "sleep 10 && /bin/sh /root/configs/docker/cmd.sh"
+    sysctls:
+      - net.core.somaxconn=65535
     volumes:
       - ./settings.yaml:/root/.psono_server/settings.yaml
       - ./config.json:/usr/share/nginx/html/config.json
@@ -33,11 +39,26 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=nginx_proxy"
+      
+      # Router Configuration
       - "traefik.http.routers.psono.rule=Host(`psono.hmbcentral.live`)"
       - "traefik.http.routers.psono.entrypoints=websecure"
       - "traefik.http.routers.psono.tls=true"
       - "traefik.http.routers.psono.tls.certresolver=myresolver"
-      - "traefik.http.services.psono.loadbalancer.server.port=10200" # Internal port for psono-combo
+      - "traefik.http.routers.psono.middlewares=psono-security-headers,psono-compress"
+      
+      # Service Configuration
+      - "traefik.http.services.psono.loadbalancer.server.port=80"
+      
+      # Middleware: Security Headers
+      - "traefik.http.middlewares.psono-security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.psono-security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.psono-security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.psono-security-headers.headers.referrerPolicy=same-origin"
+      - "traefik.http.middlewares.psono-security-headers.headers.customResponseHeaders.Content-Security-Policy=default-src 'none'; manifest-src 'self'; connect-src 'self' https://static.psono.com https://api.pwnedpasswords.com https://storage.googleapis.com https://*.digitaloceanspaces.com https://*.blob.core.windows.net https://*.s3.amazonaws.com; font-src 'self'; img-src 'self' https://favicon.psono.com data:; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'self'; child-src 'self';"
+      
+      # Middleware: Compress
+      - "traefik.http.middlewares.psono-compress.compress=true"
 
 networks:
   nginx_proxy:
