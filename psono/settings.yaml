@@ -1,0 +1,75 @@
+# Psono Server Settings
+# IMPORTANT: This file contains SENSITIVE keys. Generate them before running.
+# See GEMINI.md for instructions on how to generate these keys.
+
+DEBUG: False
+
+# Database Configuration
+DATABASE:
+  ENGINE: 'django.db.backends.postgresql_psycopg2'
+  NAME: 'psono'
+  USER: 'psono'
+  PASSWORD: 'change_me_secure_password' # Must match .env
+  HOST: 'psono-db'
+  PORT: '5432'
+
+# Security Keys (GENERATE THESE!)
+SECRET_KEY: 'CHANGE_ME_GENERATE_RANDOM_STRING'
+PRIVATE_KEY: |
+  -----BEGIN RSA PRIVATE KEY-----
+  CHANGE_ME_PASTE_GENERATED_PRIVATE_KEY_HERE
+  -----END RSA PRIVATE KEY-----
+PUBLIC_KEY: |
+  -----BEGIN PUBLIC KEY-----
+  CHANGE_ME_PASTE_GENERATED_PUBLIC_KEY_HERE
+  -----END PUBLIC KEY-----
+
+# URLs
+HOST_URL: 'https://psono.hmbcentral.live'
+WEB_CLIENT_URL: 'https://psono.hmbcentral.live'
+
+# Email Configuration (Optional)
+EMAIL_BACKEND: 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST: 'smtp.example.com'
+EMAIL_PORT: 587
+EMAIL_HOST_USER: 'user'
+EMAIL_HOST_PASSWORD: 'password'
+EMAIL_USE_TLS: True
+DEFAULT_FROM_EMAIL: 'psono@example.com'
+SERVER_EMAIL: 'psono@example.com'
+
+# Authentik SAML Integration (Example - Uncomment and fill to enable)
+# SAML_CONFIGURATIONS:
+#   1:
+#     idp:
+#       entityId: "https://authentik.hmbcentral.live/application/saml/psono/"
+#       singleSignOnService:
+#         url: "https://authentik.hmbcentral.live/application/saml/psono/sso/binding/redirect/"
+#         binding: "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+#       singleLogoutService:
+#         url: "https://authentik.hmbcentral.live/application/saml/psono/slo/binding/redirect/"
+#         binding: "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+#       x509cert: |
+#         -----BEGIN CERTIFICATE-----
+#         PASTE_AUTHENTIK_CERT_HERE
+#         -----END CERTIFICATE-----
+#     sp:
+#       entityId: "https://psono.hmbcentral.live/saml/metadata/1"
+#       assertionConsumerService:
+#         url: "https://psono.hmbcentral.live/saml/acs/1"
+#         binding: "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+#       singleLogoutService:
+#         url: "https://psono.hmbcentral.live/saml/sls/1"
+#         binding: "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+#       x509cert: |
+#         -----BEGIN CERTIFICATE-----
+#         PASTE_GENERATED_SP_CERT_HERE
+#         -----END CERTIFICATE-----
+#       privateKey: |
+#         -----BEGIN RSA PRIVATE KEY-----
+#         PASTE_GENERATED_SP_KEY_HERE
+#         -----END RSA PRIVATE KEY-----
+
+AUTHENTICATION_METHODS:
+  - 'password'
+  # - 'saml' # Uncomment when SAML is configured

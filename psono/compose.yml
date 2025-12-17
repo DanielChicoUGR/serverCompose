@@ -1,0 +1,46 @@
+services:
+  psono-db:
+    image: postgres:13-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: psono
+      POSTGRES_DB: psono
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - psono_backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U psono"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  psono:
+    image: psono/psono-combo:latest
+    restart: unless-stopped
+    depends_on:
+      psono-db:
+        condition: service_healthy
+    volumes:
+      - ./settings.yaml:/root/.psono_server/settings.yaml
+      - ./config.json:/usr/share/nginx/html/config.json
+      - ./config.json:/usr/share/nginx/html/portal/config.json
+      - ./data/psono-data:/root/.psono_server
+    networks:
+      - psono_backend
+      - nginx_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=nginx_proxy"
+      - "traefik.http.routers.psono.rule=Host(`psono.hmbcentral.live`)"
+      - "traefik.http.routers.psono.entrypoints=websecure"
+      - "traefik.http.routers.psono.tls=true"
+      - "traefik.http.routers.psono.tls.certresolver=myresolver"
+      - "traefik.http.services.psono.loadbalancer.server.port=10200" # Internal port for psono-combo
+
+networks:
+  nginx_proxy:
+    external: true
+  psono_backend:
+    driver: bridge

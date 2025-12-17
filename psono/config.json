@@ -1,0 +1,14 @@
+{
+  "backend_servers": [
+    {
+      "title": "Psono Server",
+      "url": "https://psono.hmbcentral.live",
+      "domain": "psono.hmbcentral.live"
+    }
+  ],
+  "base_url": "https://psono.hmbcentral.live",
+  "allow_registration": true,
+  "allow_custom_server": false,
+  "allow_lost_password": true,
+  "authentication_methods": ["password", "saml"]
+}
