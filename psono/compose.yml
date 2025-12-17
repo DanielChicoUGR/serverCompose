@@ -45,7 +45,7 @@ services:
       - "traefik.http.routers.psono.entrypoints=websecure"
       - "traefik.http.routers.psono.tls=true"
       - "traefik.http.routers.psono.tls.certresolver=myresolver"
-      - "traefik.http.routers.psono.middlewares=psono-security-headers,psono-compress"
+      - "traefik.http.routers.psono.middlewares=psono-security-headers,psono-compress,psono-buffering"
       
       # Service Configuration
       - "traefik.http.services.psono.loadbalancer.server.port=80"
@@ -59,6 +59,9 @@ services:
       
       # Middleware: Compress
       - "traefik.http.middlewares.psono-compress.compress=true"
+
+      # Middleware: Buffering (Client Max Body Size 256m)
+      - "traefik.http.middlewares.psono-buffering.buffering.maxRequestBodyBytes=268435456"
 
 networks:
   nginx_proxy:
