@@ -1,0 +1,60 @@
+services:
+  aliasvault:
+    image: ghcr.io/aliasvault/aliasvault:latest
+    container_name: aliasvault
+    restart: unless-stopped
+
+    volumes:
+      - ./database:/database
+      - ./logs:/logs
+      - ./secrets:/secrets
+    ports:
+      - "25:25"
+      - "587:587"
+
+
+    environment:
+      HOSTNAME: "*"
+      PUBLIC_REGISTRATION_ENABLED: "true"
+      IP_LOGGING_ENABLED: "true"
+      FORCE_HTTPS_REDIRECT: "false" # Traefik se encarga de redirigir a HTTPS
+      SUPPORT_EMAIL: "admin@${DOMAIN}"
+      PRIVATE_EMAIL_DOMAINS: ${DOMAIN}
+# HOST=hmbcentral.live
+# DOMAIN=vault.hmbcentral.live
+
+    networks:
+      - nginx_proxy
+
+    labels:
+      # - "traefik.enable=true"
+
+      # --- HTTP/HTTPS (Web Dashboard) ---
+      # - "traefik.http.routers.aliasvault.rule=Host(`${DOMAIN}`)"
+      # - "traefik.http.routers.aliasvault.entrypoints=websecure"
+      # - "traefik.http.routers.aliasvault.tls.certresolver=letsencrypt"
+      # - "traefik.http.services.aliasvault.loadbalancer.server.port=80"
+      # - "traefik.http.routers.aliasvault.service=aliasvault"
+           # Frontend
+      - "traefik.enable=true"
+      - "traefik.http.routers.aliasvault.rule=Host(`vault.hmbcentral.live`)"
+      - "traefik.http.routers.aliasvault.entrypoints=websecure"
+      - "traefik.http.routers.aliasvault.service=aliasvault"
+      - "traefik.http.routers.aliasvault.tls.certresolver=letsencrypt"
+      - "traefik.http.services.aliasvault.loadbalancer.server.port=80"
+      
+      
+
+#       # --- SMTP (Puerto 25 - Recepción de correo) ---
+#       - "traefik.tcp.routers.aliasvault-smtp.rule=HostSNI(`*`)"
+#       - "traefik.tcp.routers.aliasvault-smtp.entrypoints=smtp"
+#       - "traefik.tcp.services.aliasvault-smtp.loadbalancer.server.port=25"
+# 
+#       # --- Submission (Puerto 587 - Envío de correo/Cliente) ---
+#       - "traefik.tcp.routers.aliasvault-submission.rule=HostSNI(`*`)"
+#       - "traefik.tcp.routers.aliasvault-submission.entrypoints=starttls"
+#       - "traefik.tcp.services.aliasvault-submission.loadbalancer.server.port=587"
+
+networks:
+  nginx_proxy:
+    external: true

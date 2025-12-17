@@ -1,0 +1,139 @@
+# new_config.yml
+# Este archivo de configuración de Traefik es equivalente a los argumentos de línea de comandos
+# definidos en el archivo compose.yml y se fusiona con la configuración de middlewares de config.yml.
+
+# --- Configuración Estática (equivalente a los command de compose.yml) ---
+
+# API y Dashboard de Traefik
+# Habilita el Dashboard para la monitorización.
+api:
+  dashboard: true
+  insecure: false # El dashboard se expondrá de forma segura a través de un router con TLS
+
+# Providers de Configuración
+# Define de dónde Traefik debe leer la configuración de los routers, servicios, etc.
+providers:
+  # Provider de Docker: detecta automáticamente contenedores.
+  docker:
+    exposedByDefault: false # No expone todos los contenedores por defecto por seguridad.
+    network: nginx_proxy    # Solo busca contenedores en la red especificada.
+  
+  # Provider de Archivo: lee la configuración dinámica desde archivos.
+  file:
+    directory: /etc/traefik/dynamic # Directorio donde se encuentran los archivos de config dinámica.
+    watch: true # Recarga la configuración automáticamente cuando los archivos cambian.
+
+# EntryPoints (Puntos de Entrada)
+# Define los puertos por donde Traefik recibe el tráfico.
+entryPoints:
+  # Entrypoint para tráfico HTTP en el puerto 80.
+  web:
+    address: ":80"
+    # Redirección global de HTTP a HTTPS.
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+
+  # Entrypoint para tráfico HTTPS en el puerto 443.
+  websecure:
+    address: ":443"
+
+  # Entrypoints TCP para el servicio 'croc'.
+  croc-9009:
+    address: ":9009"
+  croc-9010:
+    address: ":9010"
+  croc-9011:
+    address: ":9011"
+  croc-9012:
+    address: ":9012"
+  croc-9013:
+    address: ":9013"
+
+  # Entrypoints TCP para servicios de Email.
+  smtps:
+    address: ":465" # SMTPS
+  imaps:
+    address: ":993" # IMAPS
+  starttls:
+    address: ":587" # STARTTLS
+
+# Resolvers de Certificados (para Let's Encrypt)
+# Configura cómo Traefik obtiene automáticamente certificados SSL/TLS.
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: dachival0007.2@gmail.com
+      storage: /letsencrypt/acme.json # Archivo para almacenar los certificados.
+      # Desafío HTTP-01 para la validación de dominios.
+      httpChallenge:
+        entryPoint: web
+
+# Configuración de Logs
+# Define el nivel de detalle y la ubicación de los logs.
+log:
+  level: INFO # Nivel de log (DEBUG, INFO, WARN, ERROR).
+
+# Configuración de Access Logs
+# Guarda un registro de todas las peticiones que pasan por Traefik.
+accessLog:
+  filePath: /var/log/traefik/access.log # Ruta del archivo de log de acceso.
+
+# --- Configuración Dinámica (fusionada desde config.yml) ---
+# Esta sección normalmente estaría en un archivo separado dentro del directorio de 'providers.file'.
+# Se incluye aquí para tener una configuración unificada.
+
+http:
+  middlewares:
+    # Rate Limiting General (equivalente a Nginx general)
+    # Limita el número de peticiones para proteger contra ataques de fuerza bruta.
+    rate-limit:
+      rateLimit:
+        average: 100 # Peticiones por minuto.
+        burst: 50    # Ráfaga permitida.
+        period: 1m
+
+    # Rate Limiting para endpoints de Login
+    # Más restrictivo para proteger las páginas de autenticación.
+    rate-limit-login:
+      rateLimit:
+        average: 5
+        burst: 3
+        period: 1m
+
+    # Rate Limiting para APIs
+    # Un límite más alto para el consumo normal de la API.
+    rate-limit-api:
+      rateLimit:
+        average: 300
+        burst: 100
+        period: 1m
+
+    # Security Headers (Cabeceras de Seguridad)
+    # Añade cabeceras HTTP para mejorar la seguridad del sitio.
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "SAMEORIGIN"
+          X-XSS-Protection: "1; mode=block"
+
+    # Compresión de respuestas
+    # Comprime las respuestas (gzip) para reducir el tiempo de carga.
+    compress:
+      compress: {}
+
+    # Cadena de middlewares por defecto
+    # Agrupa middlewares comunes para aplicarlos fácilmente a los routers.
+    default-chain:
+      chain:
+        middlewares:
+          - rate-limit
+          - security-headers
+          - compress

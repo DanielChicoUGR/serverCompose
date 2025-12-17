@@ -30,9 +30,10 @@ services:
             - "--entrypoints.croc-9013.address=:9013"
 
             # TCP para Email (SMTPS y IMAPS)
-            - "--entrypoints.smtps.address=:465"
-            - "--entrypoints.imaps.address=:993"
-            - "--entrypoints.starttls.address=:587"
+            # - "--entrypoints.smtp.address=:25"
+            # - "--entrypoints.smtps.address=:465"
+            # - "--entrypoints.imaps.address=:993"
+            # - "--entrypoints.starttls.address=:587"
             
 
             # Let's Encrypt
@@ -52,10 +53,11 @@ services:
         ports:
             - "80:80"
             - "443:443"
+            # - "25:25"
             - "9009-9013:9009-9013"
-            - "465:465"
-            - "993:993"
-            - "587:587"
+            # - "465:465"
+            # - "993:993"
+            # - "587:587"
 
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -70,12 +72,18 @@ services:
         labels:
             # Dashboard (protegido con BasicAuth)
             - "traefik.enable=true"
+
             - "traefik.http.routers.dashboard.rule=Host(`traefik.hmbcentral.live`)"
             - "traefik.http.routers.dashboard.service=api@internal"
             - "traefik.http.routers.dashboard.entrypoints=websecure"
             - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
             - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
-
+            
+#             - "traefik.http.http-catchall.rule=hostregexp(`{host:.+}`)"
+#             - "traefik.http.http-catchall.entrypoints=web"
+#             - "traefik.http.http-catchall.middlewares=redirect-to-https"
+# 
+#             - "traefik.http.middlewares.redirect-to-https.redirectscheme=https"
             # BasicAuth para Dashboard (usuario: admin, password: changeme)
             # Generar con: htpasswd -nb admin password
             - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$2y$$05$$4pVOUXibMBAtdxvIa.3viu9PCRtVES2irBV7sK4Q08NLUm9fpKoEa"

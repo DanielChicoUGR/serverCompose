@@ -1,0 +1,35 @@
+
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    expose:
+      - "9000"
+      - "8000"
+    networks:
+      - nginx_proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    labels:
+      # Frontend
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer_web.rule=Host(`portainer.hmbcentral.live`)"
+      - "traefik.http.routers.portainer_web.entrypoints=websecure"
+      - "traefik.http.routers.portainer_web.service=portainer_web"
+      - "traefik.http.routers.portainer_web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portainer_web.loadbalancer.server.port=9000"
+      
+      
+      # Edge
+      # - "traefik.http.routers.portainer_web_edge.rule=Host(`edge.yourdomain.com`)"
+      # - "traefik.http.routers.portainer_web_edge.entrypoints=websecure"
+      # - "traefik.http.services.portainer_web_edge.loadbalancer.server.port=8000"
+      # - "traefik.http.routers.portainer_web_edge.service=portainer_web_edge"
+      # - "traefik.http.routers.portainer_web_edge.tls.certresolver=letsencrypt"
+networks:
+  nginx_proxy:
+    external: true
+volumes:
+  portainer_data:
