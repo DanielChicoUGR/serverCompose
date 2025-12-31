@@ -1,12 +1,12 @@
 services:
   psono-db:
     container_name: psono-db
-    image: postgres:13-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: psono
       POSTGRES_DB: psono
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: password
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     networks:

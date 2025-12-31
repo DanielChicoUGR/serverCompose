@@ -23,11 +23,11 @@ services:
             - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
 
               # Entrypoints TCP para Croc (9009-9013)
-            - "--entrypoints.croc-9009.address=:9009"
-            - "--entrypoints.croc-9010.address=:9010"
-            - "--entrypoints.croc-9011.address=:9011"
-            - "--entrypoints.croc-9012.address=:9012"
-            - "--entrypoints.croc-9013.address=:9013"
+            # - "--entrypoints.croc-9009.address=:9009"
+            # - "--entrypoints.croc-9010.address=:9010"
+            # - "--entrypoints.croc-9011.address=:9011"
+            # - "--entrypoints.croc-9012.address=:9012"
+            # - "--entrypoints.croc-9013.address=:9013"
 
             # TCP para Email (SMTPS y IMAPS)
             # - "--entrypoints.smtp.address=:25"
@@ -54,7 +54,7 @@ services:
             - "80:80"
             - "443:443"
             # - "25:25"
-            - "9009-9013:9009-9013"
+            # - "9009-9013:9009-9013"
             # - "465:465"
             # - "993:993"
             # - "587:587"

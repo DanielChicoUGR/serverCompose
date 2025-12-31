@@ -3,44 +3,4 @@ services:
     image: schollz/croc:latest
     env_file: .env
     restart: unless-stopped
-    networks:
-      - nginx_proxy
-    expose:
-      - "9009-9013"
-    labels:
-      - "traefik.enable=true"
-      
-      # TCP Router para puerto 9009
-      - "traefik.tcp.routers.croc-9009.rule=HostSNI(`*`)"
-      - "traefik.tcp.routers.croc-9009.entrypoints=croc-9009"
-      - "traefik.tcp.routers.croc-9009.service=croc-9009-svc"
-      - "traefik.tcp.services.croc-9009-svc.loadbalancer.server.port=9009"
-      
-      # TCP Router para puerto 9010
-      - "traefik.tcp.routers.croc-9010.rule=HostSNI(`*`)"
-      - "traefik.tcp.routers.croc-9010.entrypoints=croc-9010"
-      - "traefik.tcp.routers.croc-9010.service=croc-9010-svc"
-      - "traefik.tcp.services.croc-9010-svc.loadbalancer.server.port=9010"
-      
-      # TCP Router para puerto 9011
-      - "traefik.tcp.routers.croc-9011.rule=HostSNI(`*`)"
-      - "traefik.tcp.routers.croc-9011.entrypoints=croc-9011"
-      - "traefik.tcp.routers.croc-9011.service=croc-9011-svc"
-      - "traefik.tcp.services.croc-9011-svc.loadbalancer.server.port=9011"
-      
-      # TCP Router para puerto 9012
-      - "traefik.tcp.routers.croc-9012.rule=HostSNI(`*`)"
-      - "traefik.tcp.routers.croc-9012.entrypoints=croc-9012"
-      - "traefik.tcp.routers.croc-9012.service=croc-9012-svc"
-      - "traefik.tcp.services.croc-9012-svc.loadbalancer.server.port=9012"
-      
-      # TCP Router para puerto 9013
-      - "traefik.tcp.routers.croc-9013.rule=HostSNI(`*`)"
-      - "traefik.tcp.routers.croc-9013.entrypoints=croc-9013"
-      - "traefik.tcp.routers.croc-9013.service=croc-9013-svc"
-      - "traefik.tcp.services.croc-9013-svc.loadbalancer.server.port=9013"
-    # Publicar puerto(s) en el host para conexiones directas (9009-9013)
-
-networks:
-  nginx_proxy:
-    external: true
+    network_mode: "host"

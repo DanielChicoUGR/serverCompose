@@ -13,30 +13,19 @@ DATABASE:
   HOST: 'psono-db'
   PORT: '5432'
 
-# Security Keys (GENERATE THESE!)
-SECRET_KEY: 'CHANGE_ME_GENERATE_RANDOM_STRING'
-PRIVATE_KEY: |
-  -----BEGIN RSA PRIVATE KEY-----
-  CHANGE_ME_PASTE_GENERATED_PRIVATE_KEY_HERE
-  -----END RSA PRIVATE KEY-----
-PUBLIC_KEY: |
-  -----BEGIN PUBLIC KEY-----
-  CHANGE_ME_PASTE_GENERATED_PUBLIC_KEY_HERE
-  -----END PUBLIC KEY-----
-
 # URLs
 HOST_URL: 'https://psono.hmbcentral.live'
 WEB_CLIENT_URL: 'https://psono.hmbcentral.live'
 
-# Email Configuration (Optional)
-EMAIL_BACKEND: 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST: 'smtp.example.com'
-EMAIL_PORT: 587
-EMAIL_HOST_USER: 'user'
-EMAIL_HOST_PASSWORD: 'password'
-EMAIL_USE_TLS: True
-DEFAULT_FROM_EMAIL: 'psono@example.com'
-SERVER_EMAIL: 'psono@example.com'
+# Email Configuration (Optional) TODO: SetUp smtp server + google smtp relay
+# EMAIL_BACKEND: 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST: 'smtp.example.com'
+# EMAIL_PORT: 587
+# EMAIL_HOST_USER: 'user'
+# EMAIL_HOST_PASSWORD: 'password'
+# EMAIL_USE_TLS: True
+# DEFAULT_FROM_EMAIL: 'psono@example.com'
+# SERVER_EMAIL: 'psono@example.com'
 
 # Authentik SAML Integration (Example - Uncomment and fill to enable)
 # SAML_CONFIGURATIONS:
@@ -73,3 +62,16 @@ SERVER_EMAIL: 'psono@example.com'
 AUTHENTICATION_METHODS:
   - 'password'
   # - 'saml' # Uncomment when SAML is configured
+
+# Copy paste this content into your settings.yml and replace existing occurrences
+# 
+# WARNING: Do this only for a fresh installation!
+# Changing those variables afterwards will break the program e.g.:
+# Activation links will not work, Server will not be able to read user emails, ...
+
+SECRET_KEY: 'PUH8JlYH0I7Dv5LtYhFA2CKlCZkEShWCvLNUM5Rag1WDd5ulFetS3KmaTp4FWSbn'
+ACTIVATION_LINK_SECRET: 'zLaRTBc4ICFS0KGd5T327KvUkRzoPX7b2DdVLyOtu2DUXGDCV3OiCTarmwyy9MEl'
+DB_SECRET: '6xd2Ku50LdzInCu3pZO63njQDPhxMmmfH43Exmnpaetn2V5HD7XClBILwNHiWuj2'
+EMAIL_SECRET_SALT: '$2b$12$inbrN5RD2..YAtSLO35otu'
+PRIVATE_KEY: '5b12f78e5bdab8037f03fe42b9a5cb669541190c5bf5a714b44cfeccc9fa1268'
+PUBLIC_KEY: 'e455dc5362f2f1eb23a875c7a12cddf2242bed08fa3af900bc8eda8d82ad9c0e'
