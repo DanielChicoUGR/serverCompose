@@ -12,7 +12,7 @@ This repository contains the installation method for OpenProject using Docker Co
 First, you must clone the [openproject-docker-compose](https://github.com/opf/openproject-docker-compose) repository:
 
 ```shell
-git clone https://github.com/opf/openproject-docker-compose.git --depth=1 --branch=stable/16 openproject
+git clone https://github.com/opf/openproject-docker-compose.git --depth=1 --branch=stable/17 openproject
 ```
 
 Copy the example `.env` file and edit any values you want to change:
@@ -56,6 +56,18 @@ If you encounter this after `docker compose up` this is merely a warning which c
 If this happens during `docker compose pull` this is simply a warning as well.
 But it will result in the command's exit code to be a failure even though all images are pulled.
 To prevent this you can add the `--ignore-buildable` option, running `docker compose pull  --ignore-buildable`.
+
+### Collaboration server
+
+The collaboration server is enabled by default when setting up this application.
+
+> Important! Make sure to override the default secret by adjusting the docker-compose file or setting the `COLLABORATIVE_SERVER_SECRET` variable.
+
+When running it in *localhost* it's necessary to make a few adjustments:
+
+1. Either define a local alias (adding an entry to your hosts file) or setup HTTPS/SSL
+2. Define the `OPENPROJECT_HOST__NAME`, and the `COLLABORATIVE_SERVER_URL` in your .env file (you can look at .env.example for reference)
+3. Restart the containers
 
 ### HTTPS/SSL
 
@@ -135,7 +147,7 @@ In order to install or change to BIM inside a Docker environment, please navigat
 
 Retrieve any changes from the `openproject-docker-compose` repository:
 
-    git pull origin stable/16
+    git pull origin stable/17
 
 Build the control plane:
 

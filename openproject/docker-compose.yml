@@ -9,7 +9,7 @@ volumes:
 x-op-restart-policy: &restart_policy
   restart: unless-stopped
 x-op-image: &image
-  image: openproject/openproject:${TAG:-16-slim}
+  image: openproject/openproject:${TAG:-17-slim}
 x-op-app: &app
   <<: [*image, *restart_policy]
   environment:
@@ -19,11 +19,14 @@ x-op-app: &app
     RAILS_CACHE_STORE: "memcache"
     OPENPROJECT_CACHE__MEMCACHE__SERVER: "cache:11211"
     OPENPROJECT_RAILS__RELATIVE__URL__ROOT: "${OPENPROJECT_RAILS__RELATIVE__URL__ROOT:-}"
+    OPENPROJECT_COLLABORATIVE__EDITING__HOCUSPOCUS__URL: "${COLLABORATIVE_SERVER_URL:-wss://${OPENPROJECT_HOST__NAME}/hocuspocus}"
+    OPENPROJECT_COLLABORATIVE__EDITING__HOCUSPOCUS__SECRET: "${COLLABORATIVE_SERVER_SECRET:-OVERRIDE_ME_PLEASE}"
     DATABASE_URL: "${DATABASE_URL:-postgres://postgres:p4ssw0rd@db/openproject?pool=20&encoding=unicode&reconnect=true}"
     RAILS_MIN_THREADS: ${RAILS_MIN_THREADS:-4}
     RAILS_MAX_THREADS: ${RAILS_MAX_THREADS:-16}
     # set to true to enable the email receiving feature. See ./docker/cron for more options
     IMAP_ENABLED: "${IMAP_ENABLED:-false}"
+    SECRET_KEY_BASE: "${SECRET_KEY_BASE:-OVERWRITE_ME}"
   volumes:
     - "${OPDATA:-opdata}:/var/openproject/assets"
 
@@ -63,6 +66,7 @@ services:
   web:
     <<: *app
     command: "./docker/prod/web"
+    hostname: "${OPENPROJECT_HOST__NAME:-localhost:8080}"
     networks:
       - frontend
       - backend
@@ -114,3 +118,12 @@ services:
     restart: on-failure
     networks:
       - backend
+
+  hocuspocus:
+    image: openproject/hocuspocus:17.0.3
+    environment:
+      SECRET: ${COLLABORATIVE_SERVER_SECRET:-OVERRIDE_ME_PLEASE}
+    networks:
+      - backend
+      - frontend
+    <<: *restart_policy
