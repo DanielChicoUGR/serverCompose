@@ -1,0 +1,72 @@
+services:
+  db:
+    image: postgres:18
+    user: root
+    environment:
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo19@2025
+      - POSTGRES_DB=postgres
+    restart: always             # run as a service
+    volumes:
+        - ./postgresql:/var/lib/postgresql/18/docker      # Important Change: the PGDATA environment variable of the image was changed to be version specific in PostgreSQL 18 and above⁠
+    networks: 
+        - internal_odoo
+  odoo19:
+    image: odoo:19
+    user: root
+    depends_on:
+      - db
+    tty: true
+    command: --
+    environment:
+      - HOST=db
+      - USER=odoo
+      - PASSWORD=odoo19@2025
+      - PIP_BREAK_SYSTEM_PACKAGES=1
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ./entrypoint.sh:/entrypoint.sh
+      - ./addons:/mnt/extra-addons
+      - ./etc:/etc/odoo
+      - odoo-web-data:/var/lib/odoo
+
+    restart: always             # run as a service
+    networks:
+      - internal_odoo
+      - nginx_proxy
+    labels:
+      - "traefik.enable=true"
+
+      # Router principal (puerto 8069)
+      - "traefik.http.routers.odoo.rule=Host(`erp.hmbcentral.live`)"
+      - "traefik.http.routers.odoo.entrypoints=websecure"
+      - "traefik.http.routers.odoo.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.odoo.middlewares=default-chain@file"
+      - "traefik.http.services.odoo.loadbalancer.server.port=8069"
+      - "traefik.http.routers.odoo.service=odoo"
+
+      #Longpolling (puerto 8072)
+      - "traefik.http.routers.odoo-longpolling.rule=Host(`erp.hmbcentral.live`) && PathPrefix(`/longpolling`)"
+      - "traefik.http.routers.odoo-longpolling.entrypoints=websecure"
+      - "traefik.http.routers.odoo-longpolling.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.odoo-longpolling.middlewares=rate-limit-api@file"
+      - "traefik.http.services.odoo-longpolling.loadbalancer.server.port=8072"
+      - "traefik.http.routers.odoo-longpolling.service=odoo-longpolling"
+
+      # --- Router y Servicio TCP para Correo Entrante (SMTPS -> Odoo) ---
+      - "traefik.tcp.routers.odoo-smtps-service.rule=HostSNI(`mail.erp.hmbcentral.live`)"
+      - "traefik.tcp.routers.odoo-smtps-service.entrypoints=smtps" # Asegúrate de que 'smtps' existe en tu config de Traefik
+      - "traefik.tcp.routers.odoo-smtps-service.service=odoo-smtps-service"
+      - "traefik.tcp.routers.odoo-smtps-service.tls.certresolver=letsencrypt"
+      - "traefik.tcp.services.odoo-smtps-service.loadbalancer.server.port=8071" # Apunta al puerto configurado en odoo.conf
+
+
+    
+networks:
+  internal_odoo:
+  nginx_proxy:
+    external: true
+volumes:
+  odoo-web-data:
+  # odoo-db-data: 

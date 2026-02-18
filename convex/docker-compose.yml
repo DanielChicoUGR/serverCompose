@@ -1,0 +1,136 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: convex-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - convex_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    container_name: convex-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - convex_internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  create-buckets:
+    image: minio/mc
+    container_name: convex-create-buckets
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - convex_internal
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      /usr/bin/mc mb --ignore-existing myminio/${S3_STORAGE_EXPORTS_BUCKET};
+      /usr/bin/mc mb --ignore-existing myminio/${S3_STORAGE_FILES_BUCKET};
+      /usr/bin/mc mb --ignore-existing myminio/${S3_STORAGE_MODULES_BUCKET};
+      /usr/bin/mc mb --ignore-existing myminio/${S3_STORAGE_SEARCH_BUCKET};
+      /usr/bin/mc mb --ignore-existing myminio/${S3_STORAGE_SNAPSHOT_IMPORTS_BUCKET};
+      exit 0;
+      "
+
+  backend:
+    image: ghcr.io/get-convex/convex-backend:latest
+    container_name: convex-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      create-buckets:
+        condition: service_completed_successfully
+    environment:
+      - INSTANCE_NAME=${INSTANCE_NAME}
+      - INSTANCE_SECRET=${INSTANCE_SECRET}
+      - CONVEX_CLOUD_ORIGIN=${CONVEX_CLOUD_ORIGIN}
+      - CONVEX_SITE_ORIGIN=${CONVEX_SITE_ORIGIN}
+      - POSTGRES_URL=${DATABASE_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+      - S3_STORAGE_EXPORTS_BUCKET=${S3_STORAGE_EXPORTS_BUCKET}
+      - S3_STORAGE_FILES_BUCKET=${S3_STORAGE_FILES_BUCKET}
+      - S3_STORAGE_MODULES_BUCKET=${S3_STORAGE_MODULES_BUCKET}
+      - S3_STORAGE_SEARCH_BUCKET=${S3_STORAGE_SEARCH_BUCKET}
+      - S3_STORAGE_SNAPSHOT_IMPORTS_BUCKET=${S3_STORAGE_SNAPSHOT_IMPORTS_BUCKET}
+      - DO_NOT_REQUIRE_SSL=true
+      - RUST_LOG=info
+    volumes:
+      - data:/convex/data
+    networks:
+      - convex_internal
+      - nginx_proxy
+    labels:
+      - "traefik.enable=true"
+      # API / Backend (3210) - Mapped to root domain per request
+      - "traefik.http.routers.convex-backend.rule=Host(`nba.hmbcentral.live`)"
+      - "traefik.http.routers.convex-backend.service=convex-backend-svc"
+      - "traefik.http.routers.convex-backend.entrypoints=websecure"
+      - "traefik.http.routers.convex-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.convex-backend-svc.loadbalancer.server.port=3210"
+      
+      # HTTP Actions / Site (3211)
+      - "traefik.http.routers.convex-site.rule=Host(`site.nba.hmbcentral.live`)"
+      - "traefik.http.routers.convex-site.service=convex-site-svc"
+      - "traefik.http.routers.convex-site.entrypoints=websecure"
+      - "traefik.http.routers.convex-site.tls.certresolver=letsencrypt"
+      - "traefik.http.services.convex-site-svc.loadbalancer.server.port=3211"
+
+    healthcheck:
+      test: curl -f http://localhost:3210/version
+      interval: 5s
+      start_period: 20s
+
+  dashboard:
+    image: ghcr.io/get-convex/convex-dashboard:latest
+    container_name: convex-dashboard
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - NEXT_PUBLIC_DEPLOYMENT_URL=${NEXT_PUBLIC_DEPLOYMENT_URL}
+      - NEXT_PUBLIC_LOAD_MONACO_INTERNALLY=true
+    networks:
+      - nginx_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.convex-dashboard.rule=Host(`dashboard.nba.hmbcentral.live`)"
+      - "traefik.http.routers.convex-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.convex-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.convex-dashboard.loadbalancer.server.port=6791"
+
+volumes:
+  pgdata:
+  minio_data:
+  data:
+
+networks:
+  nginx_proxy:
+    external: true
+  convex_internal:

@@ -1,0 +1,45 @@
+services:
+  app:
+    image: nocobase/nocobase:latest-full
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      - APP_KEY=${APP_KEY}
+      - DB_DIALECT=${DB_DIALECT}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - TZ=${TZ}
+    volumes:
+      - ./storage:/app/nocobase/storage
+    networks:
+      - nginx_proxy
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nocobase.rule=Host(`noco.hmbcentral.live`)"
+      - "traefik.http.routers.nocobase.entrypoints=websecure"
+      - "traefik.http.routers.nocobase.tls.certresolver=letsencrypt"
+      - "traefik.http.services.nocobase.loadbalancer.server.port=80"
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    command: postgres -c wal_level=logical
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./storage/db/postgres:/var/lib/postgresql/data
+    networks:
+      - internal
+
+networks:
+  nginx_proxy:
+    external: true
+  internal:
+    driver: bridge
