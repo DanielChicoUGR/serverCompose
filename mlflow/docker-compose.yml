@@ -57,8 +57,6 @@ services:
       dockerfile: Dockerfile.mlflow
     
     container_name: mlflow-server
-    expose:
-      - "5000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,8 +84,8 @@ services:
       MLFLOW_SERVER_ALLOWED_HOSTS: "*.hmbcentral.live,localhost,127.0.0.1"
       MLFLOW_SERVER_CORS_ALLOWED_ORIGINS: "*.hmbcentral.live,localhost,127.0.0.1"
       MLFLOW_DOMAIN: ${MLFLOW_DOMAIN}
-      # MLFLOW_TRACKING_USERNAME: ${MLFLOW_TRACKING_USERNAME}
-      # MLFLOW_TRACKING_PASSWORD: ${MLFLOW_TRACKING_PASSWORD}
+      MLFLOW_TRACKING_USERNAME: ${MLFLOW_TRACKING_USERNAME}
+      MLFLOW_TRACKING_PASSWORD: ${MLFLOW_TRACKING_PASSWORD}
       # Server host/port
       MLFLOW_HOST: ${MLFLOW_HOST}
       MLFLOW_PORT: ${MLFLOW_PORT}
@@ -97,13 +95,14 @@ services:
       - -c
       - |
         pip install --no-cache-dir psycopg2-binary boto3
+        export MLFLOW_AUTH_CONFIG_PATH=/tmp/auth_config.ini
         mlflow server \
+          --app-name basic-auth \
           --backend-store-uri "${MLFLOW_BACKEND_STORE_URI}" \
           --artifacts-destination "${MLFLOW_ARTIFACTS_DESTINATION}" \
           --serve-artifacts \
           --host "${MLFLOW_HOST}" \
-          --port "${MLFLOW_PORT}"
-    #   
+          --port "${MLFLOW_PORT}"    #   
     # command:
     #   - /bin/bash -c mlflow server --app-name basic-auth
 
@@ -112,10 +111,10 @@ services:
       - nginx_proxy
     labels:
       - traefik.enable=true
-      - traefik.http.routers.mlflow.rule=Host(`${MLFLOW_DOMAIN}`)
+      - traefik.http.routers.mlflow.rule=Host(`mlflow.hmbcentral.live`)
       - traefik.http.routers.mlflow.entrypoints=websecure
       - traefik.http.routers.mlflow.tls=true
-      - traefik.http.routers.mlflow.tls.certresolver=letsencrypt
+      - traefik.http.routers.mlflow.tls.certresolver=letsencrypt      
       - traefik.http.services.mlflow.loadbalancer.server.port=${MLFLOW_PORT}
       - "traefik.http.middlewares.mlflow.headers.STSSeconds=315360000"
       - "traefik.http.middlewares.mlflow.headers.SSLRedirect=true"
